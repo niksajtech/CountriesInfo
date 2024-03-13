@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31702.278
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CountriesInfo", "ConsoleApp15\CountriesInfo.csproj", "{058B973C-9F8E-43FE-9026-197A08FECE7A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CountriesInfo", "CountriesInfo\CountriesInfo.csproj", "{058B973C-9F8E-43FE-9026-197A08FECE7A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
