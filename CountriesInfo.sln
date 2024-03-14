@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.31702.278
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CountriesInfo", "CountriesInfo\CountriesInfo.csproj", "{058B973C-9F8E-43FE-9026-197A08FECE7A}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CountriesFlagsToDB", "CountriesFlagsToDB\CountriesFlagsToDB.csproj", "{CED50C52-13DE-49F5-9F64-37B359828BBF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{058B973C-9F8E-43FE-9026-197A08FECE7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{058B973C-9F8E-43FE-9026-197A08FECE7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{058B973C-9F8E-43FE-9026-197A08FECE7A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CED50C52-13DE-49F5-9F64-37B359828BBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CED50C52-13DE-49F5-9F64-37B359828BBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CED50C52-13DE-49F5-9F64-37B359828BBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CED50C52-13DE-49F5-9F64-37B359828BBF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
