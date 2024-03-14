@@ -9,6 +9,7 @@ using System.IO;
 using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
+using System.Linq;
 
 namespace CountriesInfo
 {
@@ -17,11 +18,16 @@ namespace CountriesInfo
         static void Main(string[] args)
         {
             string connectionString = "Data Source=.;Initial Catalog=niksaj;Integrated Security=True";
-            string query = "SELECT CountryName, CountryFlagImage, Flag, State_emblem, Capital, Largest_cities, " +
-                           "Official_Languages, Religion, Independence_Date, Republic_Date, Total_Area, " +
-                           "Currency, Date_format, Driving_side, Calling_code, ISO_3166_code, Internet_TLD, " +
-                           "National_Game, National_Bird, Important_Rivers, Highest_Citizen_award, Parliament, " +
-                           "Judiciary FROM dbo.Country ORDER BY CountryName ASC";
+            string query = "SELECT CountryName, CountryFlagImage, Capital, Largest_cities, " +
+                "Official_Languages, Religion, " +
+                "CASE WHEN Independence_Date IS NULL THEN 'Not Available' ELSE CONVERT(varchar, Independence_Date, 103) END AS Independence_Date, " +
+                "CASE WHEN Republic_Date IS NULL THEN 'Not Available' ELSE CONVERT(varchar, Republic_Date, 103) END AS Republic_Date, " +
+                "Total_Area, Currency, Date_format, Driving_side, Calling_code, ISO_3166_code, Internet_TLD, " +
+                "National_Game, National_Bird, Important_Rivers, Highest_Citizen_award, Parliament, " +
+                "Judiciary " +
+                "FROM dbo.Country ORDER BY CountryName ASC";
+
+
 
             string filePath = @"C:\Users\hp\Documents\ebook\CountryInformation.docx";
 
@@ -87,6 +93,9 @@ namespace CountriesInfo
 
         static void AddParagraph(Body body, string columnName, string columnValue, bool isBold, RunProperties runProperties, bool isCentered)
         {
+            // Remove underscores from column name and replace with spaces
+            columnName = columnName.Replace("_", " ");
+
             Paragraph paragraph = body.AppendChild(new Paragraph());
 
             if (isCentered)
@@ -106,6 +115,22 @@ namespace CountriesInfo
             else
             {
                 columnNameRun.RunProperties = (RunProperties)runProperties.CloneNode(true);
+            }
+
+            // Check if the column value is a date
+            if (columnName.Trim().Equals("Independence_Date", StringComparison.OrdinalIgnoreCase) ||
+                columnName.Trim().Equals("Republic_Date", StringComparison.OrdinalIgnoreCase))
+            {
+                // Parse the date
+                if (DateTime.TryParse(columnValue, out DateTime date))
+                {
+                    // Format the date as dd/mm/yyyy without time part
+                    columnValue = date.ToString("dd/MM/yyyy");
+                }
+                else
+                {
+                    columnValue = "Not Available"; // Display "N/A" if the date is not available
+                }
             }
 
             Run columnValueRun = paragraph.AppendChild(new Run(new Text(columnValue)));
@@ -199,6 +224,17 @@ namespace CountriesInfo
                                 DistanceFromRight = (UInt32Value)0U,
                                 EditId = "50D07946"
                             });
+
+                    // Create border
+                    var border = new A.Outline(
+                        new A.SolidFill() { RgbColorModelHex = new A.RgbColorModelHex() { Val = "000000" } })
+                    {
+                        Width = 1 // Width of the border in EMUs (English Metric Units)
+                    };
+
+                    // Apply border to the shape properties of the image
+                    element.Descendants<PIC.ShapeProperties>().First().Append(border);
+
 
                     Paragraph paragraph = new Paragraph();
                     paragraph.AppendChild(new ParagraphProperties(new Justification() { Val = JustificationValues.Center }));
