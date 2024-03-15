@@ -27,8 +27,6 @@ namespace CountriesInfo
                 "Judiciary " +
                 "FROM dbo.Country ORDER BY CountryName ASC";
 
-
-
             string filePath = @"C:\Users\hp\Documents\ebook\CountryInformation.docx";
 
             using (WordprocessingDocument wordDocument = WordprocessingDocument.Create(filePath, WordprocessingDocumentType.Document))
@@ -37,9 +35,11 @@ namespace CountriesInfo
                 mainPart.Document = new Document();
                 Body body = mainPart.Document.AppendChild(new Body());
 
+                AddCoverPage(body); // Add cover page
+
                 RunProperties defaultRunProperties = new RunProperties(
                     new RunFonts() { Ascii = "Times New Roman" },
-                    new FontSize() { Val = "24" } // 12pt
+                    new FontSize() { Val = "28" } // 14pt
                 );
 
                 RunProperties countryNameRunProperties = new RunProperties(
@@ -55,9 +55,26 @@ namespace CountriesInfo
 
                     DataTable schemaTable = reader.GetSchemaTable();
 
+                    int rowCount = 0; // Counter to track the number of rows processed
+
                     while (reader.Read())
                     {
-                        // Iterate through schema to get column names
+                        // Check if there's enough space for the content and the image
+                        if (rowCount >= 15)
+                        {
+                            // Check if the previous page is empty
+                            if (IsPageEmpty(body))
+                            {
+                                RemoveLastPage(body);
+                            }
+
+                            // Insert a page break
+                            body.AppendChild(new Paragraph(new Run(new Break() { Type = BreakValues.Page })));
+
+                            rowCount = 0; // Reset the row count after inserting a page break
+                        }
+
+                        // Iterate through schema to get column names and values
                         foreach (DataRow row in schemaTable.Rows)
                         {
                             string columnName = row["ColumnName"].ToString();
@@ -80,10 +97,30 @@ namespace CountriesInfo
                                 byte[] imageData = (byte[])reader["CountryFlagImage"];
                                 AddImageToBody(wordDocument, body, imageData);
                             }
+
+                            // Check if the current column is "Judiciary" and insert a page break after it
+                            if (columnName == "Judiciary")
+                            {
+                                // Check if the previous page is empty
+                                if (IsPageEmpty(body))
+                                {
+                                    RemoveLastPage(body);
+                                }
+
+                                // Insert a page break
+                                body.AppendChild(new Paragraph(new Run(new Break() { Type = BreakValues.Page })));
+
+                                rowCount = 0; // Reset the row count after inserting a page break
+                            }
                         }
 
-                        // Insert a page break
-                        body.AppendChild(new Paragraph(new Run(new Break() { Type = BreakValues.Page })));
+                        rowCount++; // Increment the row count for each row processed
+                    }
+
+                    // Check if the last page is empty and remove it
+                    if (IsPageEmpty(body))
+                    {
+                        RemoveLastPage(body);
                     }
                 }
             }
@@ -107,14 +144,25 @@ namespace CountriesInfo
 
             Run columnNameRun = paragraph.AppendChild(new Run(new Text(columnName)));
 
-            if (isBold)
+            if (columnName.Equals("CountryName", StringComparison.OrdinalIgnoreCase))
             {
+                // Apply header style for "CountryName"
                 Bold bold = new Bold();
-                columnNameRun.RunProperties = new RunProperties(bold, runProperties.CloneNode(true));
+                RunProperties headerRunProperties = new RunProperties(bold, runProperties.CloneNode(true));
+                columnNameRun.RunProperties = headerRunProperties;
             }
             else
             {
-                columnNameRun.RunProperties = (RunProperties)runProperties.CloneNode(true);
+                // Apply the specified run properties for other columns
+                if (isBold)
+                {
+                    Bold bold = new Bold();
+                    columnNameRun.RunProperties = new RunProperties(bold, runProperties.CloneNode(true));
+                }
+                else
+                {
+                    columnNameRun.RunProperties = (RunProperties)runProperties.CloneNode(true);
+                }
             }
 
             // Check if the column value is a date
@@ -138,7 +186,8 @@ namespace CountriesInfo
             if (columnName.Trim().Equals("CountryName", StringComparison.OrdinalIgnoreCase))
             {
                 Bold bold = new Bold();
-                columnValueRun.RunProperties = new RunProperties(bold, runProperties.CloneNode(true));
+                RunProperties headerRunProperties = new RunProperties(bold, runProperties.CloneNode(true));
+                columnNameRun.RunProperties = headerRunProperties;
             }
             else
             {
@@ -235,7 +284,6 @@ namespace CountriesInfo
                     // Apply border to the shape properties of the image
                     element.Descendants<PIC.ShapeProperties>().First().Append(border);
 
-
                     Paragraph paragraph = new Paragraph();
                     paragraph.AppendChild(new ParagraphProperties(new Justification() { Val = JustificationValues.Center }));
                     paragraph.AppendChild(new Run(element));
@@ -243,5 +291,57 @@ namespace CountriesInfo
                 }
             }
         }
+
+        static bool IsPageEmpty(Body body)
+        {
+            return body.Elements<Paragraph>().All(p => string.IsNullOrWhiteSpace(p.InnerText));
+        }
+
+        static void RemoveLastPage(Body body)
+        {
+            // Remove the last paragraph, which represents the empty page
+            var lastParagraph = body.Elements<Paragraph>().LastOrDefault();
+            if (lastParagraph != null)
+            {
+                lastParagraph.Remove();
+            }
+        }
+
+        static void AddCoverPage(Body body)
+        {
+            Paragraph title = new Paragraph();
+            title.AppendChild(new ParagraphProperties(new Justification() { Val = JustificationValues.Center }));
+            title.AppendChild(new Run(new Text() { Text = "WORLD WANDERER" })
+            {
+                RunProperties = new RunProperties(new RunFonts() { Ascii = "Times New Roman" }, new FontSize() { Val = "144" })// 72pt
+            });
+            body.AppendChild(title);
+
+            Paragraph subtitle = new Paragraph();
+            subtitle.AppendChild(new ParagraphProperties(new Justification() { Val = JustificationValues.Center }));
+            subtitle.AppendChild(new Run(new Text() { Text = "A TOUR OF 195 NATIONS" })
+            {
+                RunProperties = new RunProperties(new RunFonts() { Ascii = "Times New Roman" }, new FontSize() { Val = "44" })// 22pt
+            });
+            body.AppendChild(subtitle);
+
+            for (int i = 0; i < 18; i++) // Add 18 line breaks
+            {
+                body.AppendChild(new Paragraph());
+            }
+
+            Paragraph author = new Paragraph();
+            author.AppendChild(new ParagraphProperties(new Justification() { Val = JustificationValues.Center }));
+            author.AppendChild(new Run(new Text() { Text = "SAJID AHMED SHAHSROHA" })
+            {
+                RunProperties = new RunProperties(new RunFonts() { Ascii = "Times New Roman" }, new FontSize() { Val = "44" })// 22pt
+            });
+            body.AppendChild(author);
+
+            body.AppendChild(new Paragraph(new Run(new Break() { Type = BreakValues.Page }))); // Insert page break after cover page
+        }
+
+
+
     }
 }
