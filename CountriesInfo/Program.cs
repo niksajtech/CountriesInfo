@@ -10,6 +10,7 @@ using A = DocumentFormat.OpenXml.Drawing;
 using DW = DocumentFormat.OpenXml.Drawing.Wordprocessing;
 using PIC = DocumentFormat.OpenXml.Drawing.Pictures;
 using System.Linq;
+using System.Globalization;
 
 namespace CountriesInfo
 {
@@ -36,6 +37,9 @@ namespace CountriesInfo
                 Body body = mainPart.Document.AppendChild(new Body());
 
                 AddCoverPage(body); // Add cover page
+
+                // Add custom style
+                //AddCustomStyle(mainPart);
 
                 RunProperties defaultRunProperties = new RunProperties(
                     new RunFonts() { Ascii = "Times New Roman" },
@@ -83,7 +87,7 @@ namespace CountriesInfo
                             // Add country information as paragraphs
                             if (columnName == "CountryName")
                             {
-                                AddParagraph(body, "", columnValue, true, countryNameRunProperties, true); // Centered and bold
+                                AddParagraph(body,"", columnValue.ToUpper(), true, countryNameRunProperties, true); // Centered and bold
                             }
                             else
                             {
@@ -128,10 +132,57 @@ namespace CountriesInfo
             Console.WriteLine("Word document created successfully.");
         }
 
+        //static void AddCustomStyle(MainDocumentPart mainPart)
+        //{
+        //    // Get the Styles part of the document
+        //    StyleDefinitionsPart stylePart = mainPart.StyleDefinitionsPart;
+        //    if (stylePart == null)
+        //        stylePart = mainPart.AddNewPart<StyleDefinitionsPart>();
+
+        //    // Create new Styles element if it doesn't exist
+        //    Styles styles = stylePart.Styles ?? new Styles();
+
+        //    // Define your custom style
+        //    Style customStyle = new Style()
+        //    {
+        //        Type = StyleValues.Paragraph,
+        //        StyleId = "Heading1", // Unique ID for the style
+        //        CustomStyle = true
+        //    };
+
+        //    // Specify the style name
+        //    StyleName styleName = new StyleName() { Val = "Heading 1" };
+
+        //    // Specify the based-on style
+        //    BasedOn basedOn = new BasedOn() { Val = "Normal" };
+
+        //    // Specify the next paragraph style
+        //    NextParagraphStyle nextParagraphStyle = new NextParagraphStyle() { Val = "Normal" };
+
+        //    // Define paragraph properties for the style
+        //    StyleParagraphProperties styleParagraphProperties = new StyleParagraphProperties();
+        //    styleParagraphProperties.Append(new SpacingBetweenLines() { After = "0", Line = "240", LineRule = LineSpacingRuleValues.Auto });
+
+        //    // Define run properties for the style
+        //    StyleRunProperties styleRunProperties = new StyleRunProperties();
+        //    styleRunProperties.Append(new Bold());
+
+        //    // Add elements to the custom style
+        //    customStyle.Append(styleName, basedOn, nextParagraphStyle, styleParagraphProperties, styleRunProperties);
+
+        //    // Add the custom style to the Styles part
+        //    styles.Append(customStyle);
+
+        //    // Save the Styles part
+        //    stylePart.Styles = styles;
+        //    stylePart.Styles.Save();
+        //}
+
         static void AddParagraph(Body body, string columnName, string columnValue, bool isBold, RunProperties runProperties, bool isCentered)
         {
             // Remove underscores from column name and replace with spaces
             columnName = columnName.Replace("_", " ");
+            columnName = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(columnName);
 
             Paragraph paragraph = body.AppendChild(new Paragraph());
 
@@ -146,10 +197,8 @@ namespace CountriesInfo
 
             if (columnName.Equals("CountryName", StringComparison.OrdinalIgnoreCase))
             {
-                // Apply header style for "CountryName"
-                Bold bold = new Bold();
-                RunProperties headerRunProperties = new RunProperties(bold, runProperties.CloneNode(true));
-                columnNameRun.RunProperties = headerRunProperties;
+                // Apply "Heading 1" style to CountryName
+                paragraph.ParagraphProperties = new ParagraphProperties(new ParagraphStyleId() { Val = "Heading1" });
             }
             else
             {
@@ -185,16 +234,22 @@ namespace CountriesInfo
 
             if (columnName.Trim().Equals("CountryName", StringComparison.OrdinalIgnoreCase))
             {
-                Bold bold = new Bold();
-                RunProperties headerRunProperties = new RunProperties(bold, runProperties.CloneNode(true));
-                columnNameRun.RunProperties = headerRunProperties;
+                // Apply the "Heading1" style
+                columnValueRun.RunProperties = new RunProperties(new RunStyle() { Val = "Heading1" });
             }
             else
             {
-                columnValueRun.RunProperties = (RunProperties)runProperties.CloneNode(true);
+                if (columnName.Trim().Equals(""))
+                {
+                    columnValueRun.RunProperties = (RunProperties)runProperties.CloneNode(true);
+                    columnValueRun.RunProperties.Color = new Color() { Val = "000000" };
+                }
+                else
+                {
+                    columnValueRun.RunProperties = (RunProperties)runProperties.CloneNode(true);
+                }
             }
         }
-
         static void AddImageToBody(WordprocessingDocument wordDoc, Body body, byte[] imageData)
         {
             using (MemoryStream imageStream = new MemoryStream(imageData))
