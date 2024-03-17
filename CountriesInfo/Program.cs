@@ -38,6 +38,13 @@ namespace CountriesInfo
 
                 AddCoverPage(body); // Add cover page
 
+               // Add footer with page number
+                var footerPart = wordDocument.MainDocumentPart.AddNewPart<FooterPart>();
+                var footer = GenerateFooterWithPageNumber();
+                footer.Save(footerPart);
+
+                wordDocument.MainDocumentPart.Document.AppendChild(new SectionProperties(new FooterReference { Id = wordDocument.MainDocumentPart.GetIdOfPart(footerPart) }));
+
                 // Add custom style
                 //AddCustomStyle(mainPart);
 
@@ -64,21 +71,24 @@ namespace CountriesInfo
                     while (reader.Read())
                     {
                         // Check if there's enough space for the content and the image
-                        if (rowCount >= 15)
-                        {
-                            // Check if the previous page is empty
-                            if (IsPageEmpty(body))
-                            {
-                                RemoveLastPage(body);
-                            }
+                        //if (rowCount >= 15)
+                        //{
+                        //    // Check if the previous page is empty
+                        //    if (IsPageEmpty(body))
+                        //    {
+                        //        RemoveLastPage(body);
+                        //    }
 
-                            // Insert a page break
-                            body.AppendChild(new Paragraph(new Run(new Break() { Type = BreakValues.Page })));
+                        //    // Insert a page break
+                        //    body.AppendChild(new Paragraph(new Run(new Break() { Type = BreakValues.Page })));
 
-                            rowCount = 0; // Reset the row count after inserting a page break
-                        }
+                        //    rowCount = 0; // Reset the row count after inserting a page break
+                        //}
 
                         // Iterate through schema to get column names and values
+                        int paragraphsPerPage = 19; // Define the maximum number of paragraphs per page
+                        int paragraphCount = 0; // Counter to track the number of paragraphs added
+
                         foreach (DataRow row in schemaTable.Rows)
                         {
                             string columnName = row["ColumnName"].ToString();
@@ -87,7 +97,7 @@ namespace CountriesInfo
                             // Add country information as paragraphs
                             if (columnName == "CountryName")
                             {
-                                AddParagraph(body,"", columnValue.ToUpper(), true, countryNameRunProperties, true); // Centered and bold
+                                AddParagraph(body, "", columnValue.ToUpper(), true, countryNameRunProperties, true); // Centered and bold
                             }
                             else
                             {
@@ -102,8 +112,11 @@ namespace CountriesInfo
                                 AddImageToBody(wordDocument, body, imageData);
                             }
 
-                            // Check if the current column is "Judiciary" and insert a page break after it
-                            if (columnName == "Judiciary")
+                            // Increment paragraph count
+                            paragraphCount++;
+
+                            // Check if the current column is "Judiciary" or if the maximum paragraphs per page is reached
+                            if (columnName == "Judiciary" || paragraphCount >= paragraphsPerPage)
                             {
                                 // Check if the previous page is empty
                                 if (IsPageEmpty(body))
@@ -114,7 +127,8 @@ namespace CountriesInfo
                                 // Insert a page break
                                 body.AppendChild(new Paragraph(new Run(new Break() { Type = BreakValues.Page })));
 
-                                rowCount = 0; // Reset the row count after inserting a page break
+                                // Reset the paragraph count after inserting a page break
+                                paragraphCount = 0;
                             }
                         }
 
@@ -131,6 +145,30 @@ namespace CountriesInfo
 
             Console.WriteLine("Word document created successfully.");
         }
+
+        static Footer GenerateFooterWithPageNumber()
+        {
+            Footer footer = new Footer();
+
+            Paragraph paragraph = new Paragraph();
+            ParagraphProperties paragraphProperties = new ParagraphProperties();
+            paragraphProperties.Append(new Justification() { Val = JustificationValues.Center });
+
+            Run pageNumberRun = new Run();
+            pageNumberRun.AppendChild(new FieldChar() { FieldCharType = FieldCharValues.Begin });
+            pageNumberRun.AppendChild(new RunProperties(new NoProof()));
+            pageNumberRun.AppendChild(new FieldCode() { Text = @"PAGE" });
+            pageNumberRun.AppendChild(new FieldChar() { FieldCharType = FieldCharValues.End });
+
+            paragraph.AppendChild(paragraphProperties);
+            paragraph.Append(pageNumberRun);
+
+            footer.Append(paragraph);
+
+            return footer;
+        }
+
+
 
         //static void AddCustomStyle(MainDocumentPart mainPart)
         //{
@@ -252,100 +290,100 @@ namespace CountriesInfo
         }
         static void AddImageToBody(WordprocessingDocument wordDoc, Body body, byte[] imageData)
         {
-            using (MemoryStream imageStream = new MemoryStream(imageData))
-            {
-                using (SKBitmap bitmap = SKBitmap.Decode(imageStream))
-                {
-                    var imagePart = wordDoc.MainDocumentPart.AddImagePart(ImagePartType.Jpeg);
+			using (MemoryStream imageStream = new MemoryStream(imageData))
+			{
+				using (SKBitmap bitmap = SKBitmap.Decode(imageStream))
+				{
+					var imagePart = wordDoc.MainDocumentPart.AddImagePart(ImagePartType.Jpeg);
 
-                    using (MemoryStream stream = new MemoryStream())
-                    {
-                        bitmap.Encode(stream, SKEncodedImageFormat.Jpeg, 100);
-                        stream.Seek(0, SeekOrigin.Begin);
-                        imagePart.FeedData(stream);
-                    }
+					using (MemoryStream stream = new MemoryStream())
+					{
+						bitmap.Encode(stream, SKEncodedImageFormat.Jpeg, 100);
+						stream.Seek(0, SeekOrigin.Begin);
+						imagePart.FeedData(stream);
+					}
 
-                    long originalWidth = bitmap.Width;
-                    long originalHeight = bitmap.Height;
+					long originalWidth = bitmap.Width;
+					long originalHeight = bitmap.Height;
 
-                    var element =
-                        new Drawing(
-                            new DW.Inline(
-                                new DW.Extent() { Cx = originalWidth * 9525, Cy = originalHeight * 9525 },
-                                new DW.EffectExtent()
-                                {
-                                    LeftEdge = 0L,
-                                    TopEdge = 0L,
-                                    RightEdge = 0L,
-                                    BottomEdge = 0L
-                                },
-                                new DW.DocProperties()
-                                {
-                                    Id = (UInt32Value)1U,
-                                    Name = "Picture 1"
-                                },
-                                new DW.NonVisualGraphicFrameDrawingProperties(
-                                    new A.GraphicFrameLocks() { NoChangeAspect = true }),
-                                new A.Graphic(
-                                    new A.GraphicData(
-                                        new PIC.Picture(
-                                            new PIC.NonVisualPictureProperties(
-                                                new PIC.NonVisualDrawingProperties()
-                                                {
-                                                    Id = (UInt32Value)0U,
-                                                    Name = "New Bitmap Image.jpg"
-                                                },
-                                                new PIC.NonVisualPictureDrawingProperties()),
-                                            new PIC.BlipFill(
-                                                new A.Blip(
-                                                    new A.BlipExtensionList(
-                                                        new A.BlipExtension()
-                                                        {
-                                                            Uri = "{28A0092B-C50C-407E-A947-70E740481C1C}"
-                                                        })
-                                                )
-                                                {
-                                                    Embed = wordDoc.MainDocumentPart.GetIdOfPart(imagePart),
-                                                    CompressionState = A.BlipCompressionValues.Print
-                                                },
-                                                new A.Stretch(
-                                                    new A.FillRectangle())),
-                                            new PIC.ShapeProperties(
-                                                new A.Transform2D(
-                                                    new A.Offset() { X = 0L, Y = 0L },
-                                                    new A.Extents() { Cx = originalWidth * 9525, Cy = originalHeight * 9525 }),
-                                                new A.PresetGeometry(
-                                                    new A.AdjustValueList()
-                                                )
-                                                { Preset = A.ShapeTypeValues.Rectangle }))
-                                    )
-                                    { Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" })
-                            )
-                            {
-                                DistanceFromTop = (UInt32Value)0U,
-                                DistanceFromBottom = (UInt32Value)0U,
-                                DistanceFromLeft = (UInt32Value)0U,
-                                DistanceFromRight = (UInt32Value)0U,
-                                EditId = "50D07946"
-                            });
+					var element =
+						new Drawing(
+							new DW.Inline(
+								new DW.Extent() { Cx = originalWidth * 9525, Cy = originalHeight * 9525 },
+								new DW.EffectExtent()
+								{
+									LeftEdge = 0L,
+									TopEdge = 0L,
+									RightEdge = 0L,
+									BottomEdge = 0L
+								},
+								new DW.DocProperties()
+								{
+									Id = (UInt32Value)1U,
+									Name = "Picture 1"
+								},
+								new DW.NonVisualGraphicFrameDrawingProperties(
+									new A.GraphicFrameLocks() { NoChangeAspect = true }),
+								new A.Graphic(
+									new A.GraphicData(
+										new PIC.Picture(
+											new PIC.NonVisualPictureProperties(
+												new PIC.NonVisualDrawingProperties()
+												{
+													Id = (UInt32Value)0U,
+													Name = "New Bitmap Image.jpg"
+												},
+												new PIC.NonVisualPictureDrawingProperties()),
+											new PIC.BlipFill(
+												new A.Blip(
+													new A.BlipExtensionList(
+														new A.BlipExtension()
+														{
+															Uri = "{28A0092B-C50C-407E-A947-70E740481C1C}"
+														})
+												)
+												{
+													Embed = wordDoc.MainDocumentPart.GetIdOfPart(imagePart),
+													CompressionState = A.BlipCompressionValues.Print
+												},
+												new A.Stretch(
+													new A.FillRectangle())),
+											new PIC.ShapeProperties(
+												new A.Transform2D(
+													new A.Offset() { X = 0L, Y = 0L },
+													new A.Extents() { Cx = originalWidth * 9525, Cy = originalHeight * 9525 }),
+												new A.PresetGeometry(
+													new A.AdjustValueList()
+												)
+												{ Preset = A.ShapeTypeValues.Rectangle }))
+									)
+									{ Uri = "http://schemas.openxmlformats.org/drawingml/2006/picture" })
+							)
+							{
+								DistanceFromTop = (UInt32Value)0U,
+								DistanceFromBottom = (UInt32Value)0U,
+								DistanceFromLeft = (UInt32Value)0U,
+								DistanceFromRight = (UInt32Value)0U,
+								EditId = "50D07946"
+							});
 
-                    // Create border
-                    var border = new A.Outline(
-                        new A.SolidFill() { RgbColorModelHex = new A.RgbColorModelHex() { Val = "000000" } })
-                    {
-                        Width = 1 // Width of the border in EMUs (English Metric Units)
-                    };
+					// Create border
+					var border = new A.Outline(
+						new A.SolidFill() { RgbColorModelHex = new A.RgbColorModelHex() { Val = "000000" } })
+					{
+						Width = 1 // Width of the border in EMUs (English Metric Units)
+					};
 
-                    // Apply border to the shape properties of the image
-                    element.Descendants<PIC.ShapeProperties>().First().Append(border);
+					// Apply border to the shape properties of the image
+					element.Descendants<PIC.ShapeProperties>().First().Append(border);
 
-                    Paragraph paragraph = new Paragraph();
-                    paragraph.AppendChild(new ParagraphProperties(new Justification() { Val = JustificationValues.Center }));
-                    paragraph.AppendChild(new Run(element));
-                    body.AppendChild(paragraph);
-                }
-            }
-        }
+					Paragraph paragraph = new Paragraph();
+					paragraph.AppendChild(new ParagraphProperties(new Justification() { Val = JustificationValues.Center }));
+					paragraph.AppendChild(new Run(element));
+					body.AppendChild(paragraph);
+				}
+			}
+		}
 
         static bool IsPageEmpty(Body body)
         {
